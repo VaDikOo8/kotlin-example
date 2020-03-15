@@ -26,14 +26,6 @@ class User private constructor(
     private var phone: String? = null
         set(value) {
             field = value?.replace("""[^+\d]""".toRegex(), "")
-                ?.also { it ->
-                    when {
-                        it.matches("""\+\d{11}""".toRegex()) -> it
-                        else -> throw IllegalArgumentException(
-                            "Enter a valid phone number starting with a + and containing 11 digits"
-                        )
-                    }
-                }
         }
 
     private var _login: String? = null
@@ -74,6 +66,26 @@ class User private constructor(
         println("Phone passwordHash is $passwordHash")
         accessCode = code
         sendAccessCodeToUser(rawPhone, code)
+    }
+
+    // For csv
+    constructor(
+        firstName: String,
+        lastName: String?,
+        email: String?,
+        rawPhone: String?,
+        saltImp: String,
+        passHash: String
+    ) : this(
+        firstName,
+        lastName,
+        email = email,
+        rawPhone = rawPhone,
+        meta = mapOf("src" to "csv")
+    ) {
+        println("Secondary csv constructor")
+        salt = saltImp
+        passwordHash = passHash
     }
 
     init {
@@ -143,11 +155,22 @@ class User private constructor(
             fullName: String,
             email: String? = null,
             password: String? = null,
-            phone: String? = null
+            phone: String? = null,
+            passHashWithSalt: String? = null
         ): User {
             val (firstName, lastName) = fullName.fullNameToPair()
+            val salt = passHashWithSalt?.split(":")?.first()
+            val passHash = passHashWithSalt?.split(":")?.last()
 
             return when {
+                !salt.isNullOrBlank() && !passHash.isNullOrBlank() -> User(
+                    firstName,
+                    lastName,
+                    email,
+                    phone,
+                    salt,
+                    passHash
+                )
                 !phone.isNullOrBlank() -> User(firstName, lastName, phone)
                 !email.isNullOrBlank() && !password.isNullOrBlank() -> User(
                     firstName,
